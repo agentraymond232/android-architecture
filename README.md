@@ -1,147 +1,83 @@
-# TODO-DataBinding
+# todo-mvvm-databinding
 
-It is based on the [todo-mvp](https://github.com/googlesamples/android-architecture/tree/todo-mvp/todoapp) sample and uses the Data Binding library to display data and bind UI elements to actions.
+This version of the app is called todo-mvvm-databinding, and is based on the [todo-databinding](https://github.com/googlesamples/android-architecture/tree/todo-databinding/) sample, which uses the [Data Binding Library](http://developer.android.com/tools/data-binding/guide.html#data_objects) to display data and bind UI elements to actions.
 
-It doesn't follow a strict Model-View-ViewModel or a Model-View-Presenter
-pattern, as it uses both View Models and Presenters.
+The sample demonstrates an alternative implementation of the todo-mvp sample using the [Model-View-ViewModel](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel) (MVVM) architecture. 
 
-The [Data Binding Library](http://developer.android.com/tools/data-binding/guide.html#data_objects) saves on boilerplate code allowing UI elements to be bound to a property in a
-data model.
+## What you need
 
-  * Layout files are used to bind data to UI elements
-  * Events are also bound with an action handler
-  * Data can be observed and set up to be updated automatically when needed
+Before exploring this sample, you should familiarize yourself with the following topics:
 
-<img src="https://github.com/googlesamples/android-architecture/wiki/images/mvp-databinding.png" alt="Diagram"/>
+* The [project README](https://github.com/googlesamples/android-architecture/tree/master)
+* The [todo-mvp](https://github.com/googlesamples/android-architecture/tree/todo-mvp) sample
+* The [todo-databinding](https://github.com/googlesamples/android-architecture/tree/todo-databinding) sample
+* The [MVVM](https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel) architecture
 
-### Data binding
+## Designing the app
 
-In the todo-mvp sample, a Task description is set in the [TaskDetailFragment](https://github.com/googlesamples/android-architecture/blob/todo-mvp/todoapp/app/src/main/java/com/example/android/architecture/blueprints/todoapp/taskdetail/TaskDetailFragment.java):
+The ViewModel in the MVVM architecture plays a similar role to the Presenter in the MVP architecture. The two architectures differ in the way that the View communicates with the ViewModel or Presenter respectively: 
+* When the app modifies the ViewModel in the MVVM architecture, the View is automatically updated by a library or framework. You can’t update the View directly from the ViewModel, as the ViewModel doesn't have access to the necessary reference.
+* You can however update the View from the Presenter in an MVP architecture as it has the necessary reference to the View. When a change is necessary, you can explicitly call the View from the Presenter to update it.
+In this project, you use layout files to bind observable fields in the ViewModel to specific UI elements such as a [TextView](https://developer.android.com/reference/android/widget/TextView.html), or [ImageView](https://developer.android.com/reference/android/widget/ImageView.html). The Data Binding Library ensures that the View and ViewModel remain in sync bi-directionally as illustrated by the following diagram.
+<img src="https://github.com/googlesamples/android-architecture/wiki/images/mvvm-databinding.png" alt="Data binding keeps the View and ViewModel in sync."/>
 
+The todo-mvvm-databinding sample includes a relatively large number of new classes, as well as many changes to existing classes. For more information on reviewing the changes to this version of the application, see [How to compare samples](https://github.com/googlesamples/android-architecture/wiki/How-to-compare-samples).
+## Implementing the app
+In the MVVM architecture, Views react to changes in the ViewModel without being explicitly called. However, the MVVM architecture presents some challenges when working with some Android components. 
 
-```java
-public void onCreateView(...) {
-    ...
-    mDetailDescription = (TextView)
-root.findViewById(R.id.task_detail_description);
-}
-
-@Override
-public void showDescription(String description) {
-    mDetailDescription.setVisibility(View.VISIBLE);
-    mDetailDescription.setText(description);
-}
-```
-In this sample, the [TaskDetailFragment](https://github.com/googlesamples/android-architecture/blob/todo-databinding/todoapp/app/src/main/java/com/example/android/architecture/blueprints/todoapp/taskdetail/TaskDetailFragment.java) simply passes the Task to the data binding:
-
+For example, to show a [`Snackbar`](https://developer.android.com/reference/android/support/design/widget/Snackbar.html), you must use a static call to pass a view object:
 
 ```java
-@Override
-public void showTask(Task task) {
-    mViewDataBinding.setTask(task);
-}
+Snackbar.make(View coordinatorLayout, String text, int length).show();
 ```
-and the library will take care of displaying it, as defined by the layout (<code>[taskdetail\_frag.xml](https://github.com/googlesamples/android-architecture/blob/todo-databinding/todoapp/app/src/main/res/layout/taskdetail_frag.xml)</code>)
 
-
-```xml
-<TextView
-    android:id="@+id/task_detail_description"
-    ...
-    android:text="@{task.description}" />
-```
-### Event binding
-
-Data binding eliminates the need to call <code>findViewById() </code>and event binding can also help minimizing <code>setOnClickListener()</code>.
-
-In this CheckBox from <code>[taskdetail\_frag.xml](https://github.com/googlesamples/android-architecture/blob/todo-databinding/todoapp/app/src/main/res/layout/taskdetail_frag.xml)</code>, the presenter is called directly when the user taps on it:
-
-
-```xml
-<CheckBox
-    android:id="@+id/task_detail_complete"
-    ...
-    android:checked="@{task.completed}"
-    android:onCheckedChanged="@{(cb, isChecked) ->
-    presenter.completeChanged(task, isChecked)}" />
-```
-### Observing data
-
-The view that shows the list of tasks (TasksFragment) only needs to know if the
-list is empty to show the appropriate message in that case. It uses [TasksViewModel](https://github.com/googlesamples/android-architecture/blob/todo-databinding/todoapp/app/src/main/java/com/example/android/architecture/blueprints/todoapp/tasks/TasksViewModel.java) to provide that information to the layout. When the list size is set, only the
-relevant properties are notified and the UI elements bound to those properties
-are updated.
-
+When making use of a Presenter in an MVP architecture, you may call the activity or fragment to delegate responsibility for finding the appropriate view object:
 
 ```java
-public void setTaskListSize(int taskListSize) {
-    mTaskListSize = taskListSize;
-    notifyPropertyChanged(BR.noTaskIconRes);
-    notifyPropertyChanged(BR.noTasksLabel);
-    notifyPropertyChanged(BR.currentFilteringLabel);
-    notifyPropertyChanged(BR.notEmpty);
-    notifyPropertyChanged(BR.tasksAddViewVisible);
-}
+mView.showSnackbar(text)
 ```
-## Feature components
 
-There are multiple ways to create the relevant parts of a feature using the
-Data Binding Library. In this case, the responsibility of each component in
-this sample is:
+A ViewModel however, doesn’t have the necessary reference to the activity or fragment. Instead, you can manually subscribe the snackbar to an observable field by making the following changes:
+* Creating an `ObservableField<String>` in the ViewModel.
+* Establishing a subscription that shows a snackbar when the `ObservableField` changes.
 
-  * Activity: object creation
-  * Fragment: interaction with framework components (options menu, Snackbar, FAB,
-Adapter for list…)
-  * Presenter: receives user actions and retrieves the data from the repository. If
-it doesn't do data loading, it's calling an action handler (See [TasksItemActionHandler](https://github.com/googlesamples/android-architecture/blob/todo-databinding/todoapp/app/src/main/java/com/example/android/architecture/blueprints/todoapp/tasks/TasksItemActionHandler.java))
-  * ViewModel: Exposes data for a particular view
+The following code snippet illustrates setting up a subscription between an observable field and a callback which triggers the call to show the snackbar:
 
-Some features don't have a ViewModel ([TaskDetail](https://github.com/googlesamples/android-architecture/blob/todo-databinding/todoapp/app/src/main/java/com/example/android/architecture/blueprints/todoapp/taskdetail), [AddEditTask](https://github.com/googlesamples/android-architecture/blob/todo-databinding/todoapp/app/src/main/java/com/example/android/architecture/blueprints/todoapp/addedittask)) as they use the Task model directly.
-
-## Additional dependencies
-
-Data Binding Library.
-
-## Features
-
-### Testability
-
-#### Unit testing
-
-As the Data Binding Library takes care of many of the wiring that would usually
-be unit tested, the number of unit tests is lower although the  test coverage
-should be similar.
-
-#### UI testing
-
-No difference with MVP.
-
-### Code metrics
-
-Compared to MVP, there are more Java classes but less code per class. Because
-some wiring is moved to layouts, there are more XML lines.
-
+```java
+mViewModel.snackbarText.addOnPropertyChangedCallback(
+        new Observable.OnPropertyChangedCallback() {
+             @Override
+             public void onPropertyChanged(Observable observable, int i) {
+                 showSnackBar();
+             }
+         });
 
 ```
--------------------------------------------------------------------------------
-Language                     files          blank        comment           code
--------------------------------------------------------------------------------
-Java                            50           1079           1552           3327 (3450 in MVP)
-XML                             34            122            337            714
--------------------------------------------------------------------------------
-SUM:                            84           1201           1889           4041
--------------------------------------------------------------------------------
-```
-### Maintainability
 
-#### Ease of amending or adding a feature
+## Maintaining the app
 
-Easier than MVP for small changes. A new feature might require some experience
-with the library.
+You may find it easier to make relatively small changes to this version of the app than todo-mvp. To add new features, you may require some experience with the Data Binding Library. As the Data Binding Library takes care of most of the wiring that you would usually unit test, the number of unit tests in this version is lower. However, the overall test coverage should be similar across both versions. 
 
-#### Learning cost
+The Data Binding Library takes care of the communication between some components, so you must be familiar with its capabilities before making changes to the existing code.
 
-The Data Binding library takes care of the communication between some
-components, so developers need to understand what it does and doesn't before
-making changes to the code.
+The table below summarizes the amount of code used to implement this version of the app. You can use it as a basis for comparison with similar tables provided for each of the other samples in this project.
+
+| Language      | Number of files | Blank lines | Lines of code |
+| ------------- | --------------- | ----------- | ------------- |
+| **Java**      |    56           |      1627   |       4093 (3901 in todo-mvp) |
+| **XML**       |             35  |      352    |      751      |
+| **Total**     |        91       |   1979      |     4844      |
+
+## Comparing this sample
+
+The following summary reviews how this solution compares to the todo-mvp base sample:
+
+* <b>Use of architectural frameworks, libraries, or tools: </b>Developers must be familiar with the Data Binding Library.
+* <b>UI testing: </b>Identical to todo-mvp
+* <b>Ease of amending or adding a feature: </b>Similar effort to todo-mvp
+* <b>Learning effort required: </b>This version requires more background learning compared to todo-mvp. You must be familiar with the MVVM architecture, which is conceptually similar to MVP but harder to implement. 
+
+
+
+
 
